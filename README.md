@@ -18,19 +18,6 @@ For questions, contact:
 
 ---
 
-## Repository Structure
-.
-├── scripts/              # Bash pipelines and command-line tools
-├── src/mrs_pipeline/     # Python analysis package
-├── notebooks/            # Analysis notebooks
-├── requirements.txt      # Python dependencies
-├── README.md
-└── LICENSE
-
-
----
-
-
 ## Installation 
 
 ### 1. Clone the repo 
@@ -102,14 +89,6 @@ Data were acquired using **MRS and fMRI**, alongside a dichoptic task.
 ---
 
 ## Pipeline Overview
-Raw data
-   ↓
-Bash preprocessing (scripts/)
-   ↓
-Python preprocessing + analysis (src/mrs_pipeline/)
-   ↓
-Notebook exploration (notebooks/)
-
 
 ---
 
@@ -172,7 +151,7 @@ This project requires:
 
 ### Python
 
-See requirements.txt
+See [requirements.txt](requirements.txt)
 
 Ensure these are available in your environment before running the pipeline.
 
