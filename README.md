@@ -14,16 +14,16 @@ It provides:
 The code is modular and designed for **reproducibility and reuse**.
 
 For questions, contact:  
-Juju Fars — juju.fars@ndcn.ox.ac.uk
-For questions about the fsl-mrs package see [this page](https://github.com/wtclarke/fsl_mrs)
+- Juju Fars — juju.fars@ndcn.ox.ac.uk
+- For inquiries concerning fsl-mrs package see [this page](https://github.com/wtclarke/fsl_mrs)
 ---
 
 ## Installation 
 
 ### 1. Clone the repo 
 ```bash
-git clone https://github.com/your-username/your-repo.git
-cd your-repo
+git clone https://github.com/julienfars/mrs_amblyopia_analysis.git
+cd mrs_amblyopia_analysis
 ```
 
 ### 2. Create the environment using Conda 
@@ -43,7 +43,7 @@ pip install -e .
 - spec2nii --> 0.7.4
 - mrs_tools (included within fsl_mrs)
 - svs_segment (included within FSL)
-- immv (renameutils; often available with FSL environments)
+- immv (renameutils)
 
 Make sure they are available in your environment:
 ```bash
@@ -127,9 +127,11 @@ basis_sets = "/path/to/basis_sets"
 preproc(data_dir)
 mrs_analysis_process(data_dir, basis_sets)
 ```
+see here for [basis sets](https://git.fmrib.ox.ac.uk/wclarke/win-mrs-basis-sets) we used the [uzay_svs_mpress_68_with_db](https://git.fmrib.ox.ac.uk/wclarke/win-mrs-basis-sets/-/tree/master/basis_sets/uzay_svs_mpress/uzay_svs_mpress_68_with_db?ref_type=heads)
+
 ## Notebook Analysis
 
-The notebook (notebooks/fsl_mrs_repo_ready.ipynb) provides:
+The notebook (notebooks/fsl_mrs_notebook.ipynb) provides:
 - A step-by-step walkthrough of the pipeline
 - Data exploration and visualisation
 - Final aggregation of results
