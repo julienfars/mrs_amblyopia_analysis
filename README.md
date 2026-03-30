@@ -1,60 +1,199 @@
-# Amblyopia Plasticity Study - MRI Data Analysis 
+# Amblyopia Plasticity Study — MRS Analysis Pipeline
 
 ## Overview
 
-Welcome to the Amblyopia Study MRI data analysis.
+This repository contains the analysis pipeline for magnetic resonance spectroscopy (MRS) data associated with the study:
 
-[...]
-If you have questions, contact [Juju Fars](mailto:julien.fars@ndcn.ox.ac.uk).
+> *[Paper title — tbc]*
 
-## Table of Contents
+It provides:
+- A **Bash-based preprocessing pipeline** to organise and standardise MRI/MRS data
+- A **Python package (`mrs_pipeline`)** for MRS preprocessing, analysis, and data aggregation
+- A **Jupyter notebook** demonstrating the full analysis workflow
 
-1. [Introduction](#introduction)
-2. [Experiment Design](#experiment-design)
-2.1. [T1](#t1)
-2.2. [MRS](#mrs)
-2.3. [pRFs](#prf)
-2.4. [Resting State](#resting)
-2.5. [T2](#t2)
-2.6. [Fieldmaps](#fmap)
-4. [Pre-processing](#preproc)
-4.1. 
-4.2.
-5. [Analysis](#analysis)
-5.1.
-5.2.
-5.3.
-5. [Contributing](#contributing)
-6. [Licence](#licence)
+The code is modular and designed for **reproducibility and reuse**.
+
+For questions, contact:  
+📧 Juju Fars — juju.fars@ndcn.ox.ac.uk
+
+---
+
+## Repository Structure
+.
+├── scripts/              # Bash pipelines and command-line tools
+├── src/mrs_pipeline/     # Python analysis package
+├── notebooks/            # Analysis notebooks
+├── requirements.txt      # Python dependencies
+├── README.md
+└── LICENSE
 
 
-## Introduction
+---
 
-Amblyopia, commonly known as "lazy eye," presents a lifelong visual impairment rooted in disrupted binocular vision processing, often attributed to gamma-aminobutyric acid (GABA)-mediated inhibitory mechanisms. Despite this understanding, the neural mechanisms underlying visual recovery in adult amblyopia remain unclear. Our study investigates the role of GABAergic inhibition in visual improvement, focusing on cortical disinhibition within the primary visual cortex (V1). Using functional magnetic resonance imaging (fMRI) and magnetic resonance spectroscopy (MRS), we aim to elucidate the neural correlates of perceptual training-induced changes in amblyopic individuals. Using a novel binocular phase combination task, we aim to rebalance binocular vision through training. 
 
-In this repository was added all the [...]  
+## Installation 
 
-For more information about the methods and the results, see our [article](tbc).
+### 1. Clone the repo 
+```bash
+git clone https://github.com/your-username/your-repo.git
+cd your-repo
+```
 
-## Experiment Design
+### 2. Create the environment using Conda 
+```bash
+conda env create -f environment.yml
+conda activate mrs_pipeline
+```
 
-[...]   
+### 3. Install the Python package 
+```bash
+pip install -e .
+```
 
-## Contributing
+### 4. External tools
+- FSL --> tested with version > 6.0
+- fsl_mrs --> v2.1.19 
+- spec2nii --> 0.7.4
+- mrs_tools (included within fsl_mrs)
+- svs_segment (included within FSL)
+- immv (renameutils; often available with FSL environments)
 
-To cite one or several experiments presented in this GitHub repository, please use the DOI provided by Zenodo [doi](tbc). Additionally, we kindly request that you cite our article [article_name](tbc). The DOI associated with this repository was added to Zenodo for long-term preservation and citation purposes. We appreciate your acknowledgment of our contributions and hope that our work proves valuable to your endeavors. If you have any questions or require further information, please feel free to contact us. 
+Make sure they are available in your environment:
+```bash
+which fslmaths
+which fsl_mrs
+which spec2nii
+```
+
+## Scientific Background
+
+Amblyopia (“lazy eye”) is a visual disorder linked to disrupted binocular processing, potentially mediated by GABAergic inhibition.
+
+This study investigates:
+- Whether **visual training induces cortical disinhibition**
+- Changes in **GABA+/Glx levels** in:
+  - Primary visual cortex (V1)
+  - Sensorimotor cortex (M1, control)
+
+Data were acquired using **MRS and fMRI**, alongside a dichoptic task.
+
+👉 See the full methods and results in the associated paper: *[link tbc]*
+
+---
+
+## Data Overview
+
+### Anatomical MRI (T1)
+- 1 mm isotropic resolution  
+- MPRAGE sequence  
+- Used for:
+  - registration
+  - voxel placement
+  - tissue segmentation  
+
+### MRS Acquisition
+- MEGA-PRESS sequence  
+- TE = 68 ms, TR = 1500 ms  
+- 160 ON / 160 OFF averages  
+- Voxels:
+  - V1 (main hypothesis)
+  - M1 (control)
+
+---
+
+## Pipeline Overview
+Raw data
+   ↓
+Bash preprocessing (scripts/)
+   ↓
+Python preprocessing + analysis (src/mrs_pipeline/)
+   ↓
+Notebook exploration (notebooks/)
+
+
+---
+
+## 1. Preprocessing (Bash)
+
+The Bash pipeline:
+- Organises raw data into a **BIDS-like structure**
+- Creates session folders (`ses-1`, `ses-2`)
+- Renames files using consistent conventions
+- Runs FSL-based preprocessing (e.g., fieldmaps, anatomical processing)
+- Prepares MRS data for downstream analysis
+
+### Run preprocessing
+
+```bash
+bash scripts/run_preprocess.sh /path/to/data
+```
+
+## 2. MRS Processing (Python)
+
+The Python package mrs_pipeline performs:
+- Conversion (spec2nii)
+- Visual QC (mrs_tools)
+- Preprocessing (fsl_mrs_preproc_edit)
+- Segmentation (svs_segment)
+- Quantification (fsl_mrs)
+- Data aggregation (summary/QC/tissue fractions)
+
+### Example usage
+```python
+from mrs_pipeline import preproc, mrs_analysis_process
+
+data_dir = "/path/to/data"
+basis_sets = "/path/to/basis_sets"
+
+preproc(data_dir)
+mrs_analysis_process(data_dir, basis_sets)
+```
+## Notebook Analysis
+
+The notebook (notebooks/fsl_mrs_repo_ready.ipynb) provides:
+- A step-by-step walkthrough of the pipeline
+- Data exploration and visualisation
+- Final aggregation of results
+
+## Extra: Voxel Overlap Analysis
+
+Additional scripts allow:
+- Comparison of voxel placement across sessions
+- Computation of overlap metrics
+- Projection of voxels into MNI space
+
+```bash
+scripts/voxel_overlap.sh
+scripts/combine_voxels.sh
+```
+## Dependencies
+
+This project requires:
+
+### Python
+
+See requirements.txt
+
+Ensure these are available in your environment before running the pipeline.
+
+## Reproducibility Notes
+Paths are not hardcoded — configure via script arguments or notebook variables
+Intermediate outputs are written to derivatives/
+The pipeline is modular: each step can be run independently
+
+## Citation
+
+If you use this repository, please cite:
+The associated paper: [tbc]
+The repository DOI (Zenodo): [tbc]
 
 ## License
 
-CC BY-NC-SA 4.0 Deed
-Attribution-NonCommercial-ShareAlike 4.0 International 
+This project is licensed under:
+CC BY-NC-SA 4.0
 
-This license enables reusers to distribute, remix, adapt, and build upon the material in any medium or format for noncommercial purposes only, and only so long as attribution is given to the creator. If you remix, adapt, or build upon the material, you must license the modified material under identical terms. CC BY-NC-SA includes the following elements:
+You are free to:
+Share and adapt the material (non-commercially)
+As long as attribution is given and derivatives use the same license
 
-BY: credit must be given to the creator.
-NC: Only noncommercial uses of the work are permitted.
-SA: Adaptations must be shared under the same terms.
-
-See [Licence file](LICENCE.md)
-
----
+See [LICENSE](LICENCE.md)
