@@ -14,8 +14,8 @@ It provides:
 The code is modular and designed for **reproducibility and reuse**.
 
 For questions, contact:  
-📧 Juju Fars — juju.fars@ndcn.ox.ac.uk
-
+Juju Fars — juju.fars@ndcn.ox.ac.uk
+For questions about the fsl-mrs package see [this page](https://github.com/wtclarke/fsl_mrs)
 ---
 
 ## Installation 
@@ -64,7 +64,7 @@ This study investigates:
 
 Data were acquired using **MRS and fMRI**, alongside a dichoptic task.
 
-👉 See the full methods and results in the associated paper: *[link tbc]*
+See the full methods and results in the associated paper: *[link tbc]*
 
 ---
 
