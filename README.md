@@ -131,7 +131,7 @@ see here for [basis sets](https://git.fmrib.ox.ac.uk/wclarke/win-mrs-basis-sets)
 
 ## Notebook Analysis
 
-The notebook (notebooks/fsl_mrs_notebook.ipynb) provides:
+The notebook (notebook/fsl_mrs_notebook.ipynb) provides:
 - A step-by-step walkthrough of the pipeline
 - Data exploration and visualisation
 - Final aggregation of results

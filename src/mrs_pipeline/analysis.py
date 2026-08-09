@@ -224,17 +224,3 @@ def mrs_analysis_process(
                     preproc_folder,
                     basis_set_folder,
                 )
-
-
-# -----------------------------------------------------------------------------
-# Compatibility helper
-# -----------------------------------------------------------------------------
-
-def process_anatomical_file(anat_file: str | Path, derivatives_folder: str | Path) -> Path:
-    """Kept here only for backwards compatibility if callers import from analysis.
-
-    Prefer the preprocessing module for anatomical processing.
-    """
-    raise NotImplementedError(
-        "process_anatomical_file belongs in preprocessing.py, not analysis.py."
-    )
