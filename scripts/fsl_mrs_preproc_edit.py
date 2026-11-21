@@ -6,6 +6,24 @@
 #
 # Copyright (C) 2021 University of Oxford
 # SHBASECOPYRIGHT
+#
+# ---------------------------------------------------------------------------
+# MODIFIED COPY - distributed under the FSL-MRS licence (see LICENSE-FSL-MRS in
+# this folder), NOT under the MIT licence of the rest of this repository.
+# Original source: https://github.com/wtclarke/fsl_mrs
+#                  (fsl_mrs/scripts/fsl_mrs_preproc_edit.py)
+#
+# Changes made for the amblyopia MRS study (Julien Fars):
+#   - Dynamic- and edit-dimension alignment use configurable ppm ranges
+#     (--dynamic_align_ppm, default 1.9-4.2 ppm; --edit_align_ppm, default
+#     2.5-4.2 ppm) and apodize=0.0, instead of the upstream defaults.
+#   - Water reference alignment across the edit dimension uses apodize=0.0.
+#   - Dynamic-fitting alignment, windowed alignment and noise-based coil
+#     pre-whitening options of later upstream versions are not included.
+#
+# Requires fsl_mrs <= 2.0.9 (imports fsl_mrs.utils.nifti_mrs_tools, which was
+# removed in fsl_mrs 2.1.0).
+# ---------------------------------------------------------------------------
 
 # Quick imports
 from fsl_mrs.auxiliary import configargparse

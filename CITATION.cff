@@ -1,0 +1,67 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+type: software
+title: "MRS Amblyopia Analysis"
+abstract: >-
+  Preprocessing and quantification pipeline for edited MR spectroscopy
+  (MEGA-PRESS, GABA+/Glx) data from a study of visual plasticity in adult
+  amblyopia. Includes a Bash pipeline for organising MRI/MRS data, a Python
+  package wrapping FSL and FSL-MRS, voxel-overlap scripts and an example
+  notebook.
+authors:
+  - family-names: Fars
+    given-names: Julien
+    orcid: "https://orcid.org/0000-0001-7771-5029"
+    affiliation: University of Oxford
+repository-code: "https://github.com/julienfars/mrs_amblyopia_analysis"
+license: MIT
+keywords:
+  - amblyopia
+  - visual plasticity
+  - MR spectroscopy
+  - MEGA-PRESS
+  - GABA
+  - FSL-MRS
+# Once archived on Zenodo, the DOI will be here (will use the concept DOI, which
+# always resolves to the latest version), plus version/date-released:
+# doi: 10.5281/zenodo.XXXXXXX
+# version: 1.0.0
+# date-released: YYYY-MM-DD
+references:
+  - type: article
+    status: in-preparation
+    title: >-
+      Dichoptic Training Boosts Binocular Vision and Reduces GABA in Adult Amblyopia
+    authors:
+      - family-names: Fars
+        given-names: Julien
+        orcid: "https://orcid.org/0000-0001-7771-5029"
+      - family-names: Starling
+        given-names: L.
+      - family-names: Zhang
+        given-names: J.
+      - family-names: Levi
+        given-names: D. M.
+      - family-names: Breach
+        given-names: L.
+      - family-names: Taylor
+        given-names: S.
+      - family-names: Quijada Leyton
+        given-names: P.
+      - family-names: Latham
+        given-names: W.
+      - family-names: Campbell
+        given-names: J.
+      - family-names: Tailor-Hamblin
+        given-names: V. K.
+      - family-names: Ip
+        given-names: I. B.
+  - type: software
+    title: "FSL-MRS"
+    authors:
+      - family-names: Clarke
+        given-names: William T.
+    repository-code: "https://github.com/wtclarke/fsl_mrs"
+    notes: >-
+      scripts/fsl_mrs_preproc_edit.py is a modified copy of FSL-MRS's
+      fsl_mrs_preproc_edit, distributed under the FSL-MRS licence.

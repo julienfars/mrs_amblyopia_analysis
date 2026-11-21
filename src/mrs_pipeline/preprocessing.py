@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import subprocess
+import sys
 from pathlib import Path
 from typing import Iterable, Optional, Sequence
 import joblib
@@ -315,13 +316,20 @@ def svs_segment_process(
 # Preprocessing of edited/reference data
 # -----------------------------------------------------------------------------
 
+# Modified copy of FSL-MRS's fsl_mrs_preproc_edit shipped in this repository
+# (scripts/fsl_mrs_preproc_edit.py). It is used instead of the version installed
+# with FSL-MRS. Resolves correctly for an editable install (pip install -e .).
+PREPROC_EDIT_SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "fsl_mrs_preproc_edit.py"
+
+
 def preproc(
     folder: str | Path,
     ref_water: Optional[str] = None,
     include: Optional[Iterable[str]] = None,
     exclude: Optional[Iterable[str]] = None,
+    script: str | Path = PREPROC_EDIT_SCRIPT,
 ) -> None:
-    """Run fsl_mrs_preproc_edit on MRS derivatives.
+    """Run the repository's modified fsl_mrs_preproc_edit on MRS derivatives.
 
     Parameters
     ----------
@@ -331,8 +339,17 @@ def preproc(
         Reserved for future use. Kept for compatibility with the notebook API.
     include, exclude:
         Subject filters.
+    script:
+        Path to the modified ``fsl_mrs_preproc_edit.py``. Defaults to the copy
+        in ``scripts/`` of this repository.
     """
-    require_command("fsl_mrs_preproc_edit")
+    script = Path(script)
+    if not script.is_file():
+        raise FileNotFoundError(
+            f"Modified preprocessing script not found: {script}. "
+            "Install the package in editable mode (pip install -e .) from the "
+            "repository root, or pass script=/path/to/fsl_mrs_preproc_edit.py."
+        )
 
     root = Path(folder)
     if not root.exists():
@@ -376,8 +393,10 @@ def preproc(
 
             ensure_dir(preproc_folder)
 
+            # Run with the current interpreter so the script imports the
+            # fsl_mrs version installed in this environment.
             cmd = [
-                "fsl_mrs_preproc_edit",
+                sys.executable, str(script),
                 "--data", str(metab_file),
                 "--reference", str(ref_file),
                 "--quant", str(quant_file) if quant_file is not None else str(ref_file),
@@ -385,8 +404,8 @@ def preproc(
                 "--hlsvd",
                 "--report",
                 "--overwrite",
-                "--align_window_dynamic", "16",
-                "--align_ppm_edit", "2.5", "3.5",
+                "--dynamic_align_ppm", "1.9", "4.2",
+                "--edit_align_ppm", "2.5", "3.5",
             ]
 
             if ecc_file is not None:

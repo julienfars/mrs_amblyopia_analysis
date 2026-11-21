@@ -1,31 +1,25 @@
+# Environment used to run the MRS pipeline.
+#
+# FSL itself (fsl_anat, bet, fslmaths, svs_segment, ...) is installed
+# separately: https://fsl.fmrib.ox.ac.uk/fsl/docs/install/
+#
+# Create with:   conda env create -f environment.yml
 name: mrs_pipeline
 channels:
+  - https://fsl.fmrib.ox.ac.uk/fsldownloads/fslconda/public/
   - conda-forge
-  - defaults
 
 dependencies:
-  # Core Python
-  - python=3.10
+  - python=3.10   # TODO: confirm (exact version used on the cluster)
 
-  # Scientific stack
-  - numpy
+  # MRS tools. scripts/fsl_mrs_preproc_edit.py needs fsl_mrs <= 2.0.9.
+  - fsl_mrs=2.0.9 # TODO: confirm exact version used for the paper
+  - spec2nii=0.7.4
+
+  # Python package dependencies (src/mrs_pipeline)
   - pandas
-  - scipy
-
-  # Parallel processing
   - joblib
 
-  # Optional (for notebook usage)
+  # Notebook
   - jupyterlab
   - ipykernel
-  - matplotlib
-
-  # MRS / neuroimaging Python packages
-  - nibabel
-  - fslpy
-
-  # pip-only packages
-  - pip
-  - pip:
-      - nifti-mrs
-      - spec2nii

@@ -4,15 +4,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mrs_pipeline"
-version = "0.1.0"
+version = "1.0.0"
 description = "Analysis pipeline for MRS data from the amblyopia plasticity study"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { file = "LICENCE.md" }
+license = { text = "MIT" }
+authors = [
+    { name = "Julien Fars" },
+]
+# Python dependencies only. FSL, FSL-MRS and spec2nii are installed through
+# environment.yml (FSL-MRS is not distributed on PyPI).
 dependencies = [
     "pandas",
     "joblib",
 ]
+
+[project.urls]
+Repository = "https://github.com/julienfars/mrs_amblyopia_analysis"
 
 [tool.setuptools.packages.find]
 where = ["src"]
