@@ -163,7 +163,7 @@ for subj_dir in "${SUBJECTS[@]}"; do
 
     [[ -d "$anat_dir" ]] || { warn "Missing anat directory: $anat_dir"; continue; }
 
-    t1_file="$(single_match "$anat_dir" '*acq-MP2RAGE_T1w.nii.gz')"
+    t1_file="$(single_match "$anat_dir" '*acq-MPRAGE_T1w.nii.gz')"
     mkdir -p "$warp_dir"
 
     log "Building warp for $subj $timepoint"
@@ -207,8 +207,8 @@ for subj_dir in "${SUBJECTS[@]}"; do
     continue
   }
 
-  t1_base="$(single_match "$anat_base" '*acq-MP2RAGE_T1w.nii.gz')"
-  t1_s2="$(single_match "$anat_s2" '*acq-MP2RAGE_T1w.nii.gz')"
+  t1_base="$(single_match "$anat_base" '*acq-MPRAGE_T1w.nii.gz')"
+  t1_s2="$(single_match "$anat_s2" '*acq-MPRAGE_T1w.nii.gz')"
 
   mkdir -p "$mrs_base" "$mrs_s2"
 

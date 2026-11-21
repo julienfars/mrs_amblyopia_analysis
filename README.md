@@ -46,7 +46,8 @@ disinhibition**, measured as changes in **GABA+ and Glx** in:
 ## Data acquisition
 
 ### Anatomical MRI (T1)
-- MPRAGE, 1 mm isotropic
+- MPRAGE, 1 mm isotropic (files labelled `acq-MPRAGE_T1w`; T2w files are
+  labelled `acq-TSE_T2w`)
 - Used for registration, voxel placement and tissue segmentation
 
 ### MRS
@@ -75,22 +76,20 @@ cd mrs_amblyopia_analysis
 ### 2. Install FSL
 Install FSL separately, following the
 [FSL installation guide](https://fsl.fmrib.ox.ac.uk/fsl/docs/install/).
-Version used: **FSL X.X.X** <!-- TODO: confirm -->
+Version used: **FSL 6.0**.
 
 ### 3. Create the conda environment
 ```bash
 conda env create -f environment.yml
 conda activate mrs_pipeline
 ```
-This installs FSL-MRS, spec2nii and the Python dependencies at the versions
-used for the study.
+This installs FSL-MRS at the version used for the study, together with
+spec2nii (an FSL-MRS dependency) and the Python dependencies.
 
 ### 4. Install the Python package
 ```bash
 pip install -e .
 ```
-Install in **editable mode** (`-e`): the package runs the modified
-preprocessing script from this repository's `scripts/` folder.
 
 ### 5. Other external tools
 - `immv` from [renameutils](https://www.nongnu.org/renameutils/), used by the
@@ -108,7 +107,7 @@ flowchart LR
     Raw["Raw MRI/MRS data\n(Siemens TWIX .dat, T1)"]
     Bash["scripts/run_preprocess.sh\norganise + anatomical preproc"]
     Conv["spec2nii\nconversion"]
-    Pre["fsl_mrs_preproc_edit\n(modified, scripts/)"]
+    Pre["fsl_mrs_preproc_edit\npreprocessing"]
     Seg["fsl_anat + svs_segment\ntissue fractions"]
     Fit["fsl_mrs\nquantification"]
     Agg["summary / QC /\ntissue-fraction tables"]
@@ -135,7 +134,7 @@ scripts/run_preprocess.sh /path/to/data
 The `mrs_pipeline` package runs:
 - Conversion of the raw data (`spec2nii`)
 - Visual QC (`mrs_tools`)
-- Preprocessing (modified `fsl_mrs_preproc_edit`, see below)
+- Preprocessing (`fsl_mrs_preproc_edit`)
 - Segmentation (`fsl_anat`, `svs_segment`)
 - Quantification (`fsl_mrs`)
 - Aggregation of the summary, QC and tissue-fraction outputs
@@ -154,17 +153,41 @@ mrs_analysis_process(data_dir, basis_sets)
 [`uzay_svs_mpress_68_with_db`](https://git.fmrib.ox.ac.uk/wclarke/win-mrs-basis-sets/-/tree/master/basis_sets/uzay_svs_mpress/uzay_svs_mpress_68_with_db?ref_type=heads)
 from the [WIN MRS basis sets](https://git.fmrib.ox.ac.uk/wclarke/win-mrs-basis-sets).
 
-### Modified FSL-MRS preprocessing script
+### Processing settings used in the study
 
-[`scripts/fsl_mrs_preproc_edit.py`](scripts/fsl_mrs_preproc_edit.py) is a
-modified copy of FSL-MRS's `fsl_mrs_preproc_edit`. `preproc()` runs this copy,
-not the one installed with FSL-MRS. Compared with the original, it:
-- uses configurable ppm ranges for alignment across dynamics
-  (`--dynamic_align_ppm`, 1.9–4.2 ppm) and across edit conditions
-  (`--edit_align_ppm`, 2.5–3.5 ppm as called by the pipeline)
-- disables apodisation during alignment
+All steps use the tools installed with FSL-MRS (version in
+`environment.yml`).
 
-It needs **fsl_mrs ≤ 2.0.9**, as pinned in `environment.yml`.
+**Preprocessing** (`fsl_mrs_preproc_edit`), per voxel:
+- coil combination (when the data are not already combined)
+- frequency/phase alignment across dynamics within 1.9–4.2 ppm, using
+  windows of 16 transients (`--align_window_dynamic 16`)
+- eddy-current correction with a separate reference (`--ecc`)
+- HLSVD residual water removal (`--hlsvd`)
+- alignment of the edit-ON/OFF conditions within 2.5–3.5 ppm
+  (`--align_ppm_edit 2.5 3.5`)
+- separate water reference for quantification (`--quant`)
+
+**Fitting** (`fsl_mrs`, truncated Newton algorithm), with a complex
+polynomial baseline of order 0 (`--baseline_order -1`), NAA as the internal
+reference and tissue-corrected water scaling (`--tissue` from
+`svs_segment`):
+
+| Spectrum | Basis set | Macromolecules | Combined metabolites |
+|---|---|---|---|
+| Difference (`diff`) | `diff` | `sysMM` | GABA+sysMM (GABA+), Glu+Gln+GSH (Glx), NAA+NAAG |
+| Edit-ON (`edit_1`) | `on` | `sysMM` | as above, plus Cr+PCr |
+| Edit-OFF (`edit_0`) | `off_updated` | MM09, MM12, MM14, MM17, MM21 | as above, with GABA combined with all MM |
+
+Each FSL-MRS tool writes the exact options it ran with to `options.txt` in
+its output folder.
+
+**FSL-MRS version:** the results in the paper were produced with FSL-MRS
+2.1.19, as pinned in `environment.yml`. We reran the full pipeline with
+FSL-MRS 2.4 using the same commands and obtained consistent results. In
+FSL-MRS 2.4, `--baseline_order` is superseded by `--baseline`, so that rerun
+used the new default baseline (2nd-order polynomial) instead of order 0. Use
+the pinned version to reproduce the published values exactly.
 
 ### 3. Notebook
 
@@ -188,8 +211,8 @@ scripts/combine_voxels.sh --data /path/to/data
   variables.
 - Intermediate outputs are written to `derivatives/`.
 - Each step can be run on its own.
-- The modified preprocessing script writes the exact options it ran with to
-  `options.txt` in each output folder.
+- FSL-MRS writes the exact options of each run to `options.txt` in its
+  output folder.
 
 ## Citation
 
@@ -199,8 +222,7 @@ generates APA/BibTeX from it.
 
 ## License
 
-- **Code** in this repository: [MIT](LICENSE)
-- **Exception:** [`scripts/fsl_mrs_preproc_edit.py`](scripts/fsl_mrs_preproc_edit.py)
-  is a modified version of FSL-MRS code © University of Oxford and is
-  distributed under the [FSL-MRS licence](scripts/LICENSE-FSL-MRS)
-  (non-commercial use only).
+This code is released under the [MIT License](LICENSE).
+
+FSL and FSL-MRS are not included in this repository. They are installed
+separately and are distributed under their own licences (non-commercial use).

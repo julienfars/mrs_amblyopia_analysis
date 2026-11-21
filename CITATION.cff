@@ -62,6 +62,4 @@ references:
       - family-names: Clarke
         given-names: William T.
     repository-code: "https://github.com/wtclarke/fsl_mrs"
-    notes: >-
-      scripts/fsl_mrs_preproc_edit.py is a modified copy of FSL-MRS's
-      fsl_mrs_preproc_edit, distributed under the FSL-MRS licence.
+    version: "2.1.19"

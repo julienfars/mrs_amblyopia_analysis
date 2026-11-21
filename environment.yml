@@ -1,4 +1,4 @@
-# Environment used to run the MRS pipeline.
+# Environment used to run the MRS pipeline for the study.
 #
 # FSL itself (fsl_anat, bet, fslmaths, svs_segment, ...) is installed
 # separately: https://fsl.fmrib.ox.ac.uk/fsl/docs/install/
@@ -10,11 +10,11 @@ channels:
   - conda-forge
 
 dependencies:
-  - python=3.10   # TODO: confirm (exact version used on the cluster)
+  - python=3.10
 
-  # MRS tools. scripts/fsl_mrs_preproc_edit.py needs fsl_mrs <= 2.0.9.
-  - fsl_mrs=2.0.9 # TODO: confirm exact version used for the paper
-  - spec2nii=0.7.4
+  # FSL-MRS (fsl_mrs, fsl_mrs_preproc_edit, mrs_tools). spec2nii is
+  # installed as a dependency.
+  - fsl_mrs=2.1.19
 
   # Python package dependencies (src/mrs_pipeline)
   - pandas
