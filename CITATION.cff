@@ -5,7 +5,7 @@ title: "MRS Amblyopia Analysis"
 abstract: >-
   Preprocessing and quantification pipeline for edited MR spectroscopy
   (MEGA-PRESS, GABA+/Glx) data from a study of visual plasticity in adult
-  amblyopia. Includes a Bash pipeline for organising MRI/MRS data, a Python
+  amblyopia. Includes a raw-to-BIDS conversion of the MRI/MRS data, a Python
   package wrapping FSL and FSL-MRS, voxel-overlap scripts and an example
   notebook.
 authors:

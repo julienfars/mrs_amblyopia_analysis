@@ -116,10 +116,12 @@ def subject_is_selected(
     subject:
         Subject folder name, e.g. "sub-01".
     include:
-        Optional collection of allowed substrings. If provided, only subjects
-        matching at least one token are kept.
+        Optional collection of subject names (e.g. "sub-01"). If provided,
+        only these subjects are kept.
     exclude:
-        Optional collection of forbidden substrings. Ignored if include is set.
+        Optional collection of subject names to skip. Ignored if include is set.
+
+    Names must match exactly, so "sub-1" does not select "sub-10".
 
     Returns
     -------
@@ -129,9 +131,9 @@ def subject_is_selected(
     exclude_set = set(exclude or [])
 
     if include_set:
-        return any(token in subject for token in include_set)
+        return subject in include_set
 
-    return not any(token in subject for token in exclude_set)
+    return subject not in exclude_set
 
 
 def iter_subject_session_dirs(

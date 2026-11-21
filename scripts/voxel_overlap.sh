@@ -159,7 +159,7 @@ for subj_dir in "${SUBJECTS[@]}"; do
 
   for timepoint in ses-1 ses-2; do
     anat_dir="$subj_dir/$timepoint/anat"
-    warp_dir="$anat_dir/warps"
+    warp_dir="$DATA_DIR/derivatives/mrs/$subj/$timepoint/warps"
 
     [[ -d "$anat_dir" ]] || { warn "Missing anat directory: $anat_dir"; continue; }
 
@@ -196,8 +196,8 @@ for subj_dir in "${SUBJECTS[@]}"; do
 
   anat_base="$subj_dir/ses-1/anat"
   anat_s2="$subj_dir/ses-2/anat"
-  warp_base="$anat_base/warps"
-  warp_s2="$anat_s2/warps"
+  warp_base="$DATA_DIR/derivatives/mrs/$subj/ses-1/warps"
+  warp_s2="$DATA_DIR/derivatives/mrs/$subj/ses-2/warps"
 
   mrs_base="$DATA_DIR/derivatives/mrs/$subj/ses-1/mrs"
   mrs_s2="$DATA_DIR/derivatives/mrs/$subj/ses-2/mrs"
@@ -286,8 +286,8 @@ for subj_dir in "${SUBJECTS[@]}"; do
 
   anat_base="$subj_dir/ses-1/anat"
   anat_s2="$subj_dir/ses-2/anat"
-  warp_base="$anat_base/warps"
-  warp_s2="$anat_s2/warps"
+  warp_base="$DATA_DIR/derivatives/mrs/$subj/ses-1/warps"
+  warp_s2="$DATA_DIR/derivatives/mrs/$subj/ses-2/warps"
 
   mrs_base="$DATA_DIR/derivatives/mrs/$subj/ses-1/mrs"
   mrs_s2="$DATA_DIR/derivatives/mrs/$subj/ses-2/mrs"

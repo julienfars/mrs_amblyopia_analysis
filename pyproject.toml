@@ -17,7 +17,14 @@ authors = [
 dependencies = [
     "pandas",
     "joblib",
+    "nibabel",
 ]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+mrs-raw-to-bids = "mrs_pipeline.raw_to_bids:main"
 
 [project.urls]
 Repository = "https://github.com/julienfars/mrs_amblyopia_analysis"

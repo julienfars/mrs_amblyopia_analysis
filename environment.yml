@@ -19,6 +19,8 @@ dependencies:
   # Python package dependencies (src/mrs_pipeline)
   - pandas
   - joblib
+  - nibabel
+  - pytest
 
   # Notebook
   - jupyterlab

@@ -2,9 +2,15 @@
 
 Preprocessing utilities for the MRS pipeline.
 
-This module should contain functions that transform raw or semi-processed data
-into analysis-ready derivatives. It is designed to be imported from notebooks or
-from a small CLI wrapper script.
+Inputs are read from the BIDS dataset written by ``mrs_pipeline.raw_to_bids``::
+
+    root/sub-01/ses-1/anat/sub-01_ses-1_acq-MPRAGE_T1w.nii.gz
+    root/sub-01/ses-1/mrs/sub-01_ses-1_acq-megapress_voi-V1_svs.nii.gz      metabolites (MEGA-PRESS)
+    root/sub-01/ses-1/mrs/sub-01_ses-1_acq-ecc_voi-V1_mrsref.nii.gz         eddy-current reference (phasecor)
+    root/sub-01/ses-1/mrs/sub-01_ses-1_acq-comb_voi-V1_mrsref.nii.gz        water reference (coil combination)
+    root/sub-01/ses-1/mrs/sub-01_ses-1_acq-quant_voi-V1_mrsref.nii.gz       water reference (quantification)
+
+Outputs are written to ``root/derivatives/mrs/sub-01/ses-1/mrs/``.
 """
 
 from __future__ import annotations
@@ -12,135 +18,41 @@ from __future__ import annotations
 import logging
 import subprocess
 from pathlib import Path
-from typing import Iterable, Optional, Sequence
-import joblib
+from typing import Iterable, Optional
 
+from .raw_to_bids import ECC_ACQ, MRS_SCANS, mrs_filename
 from .utils import ensure_dir, iter_subject_session_dirs, require_command, run_command
 
 LOGGER = logging.getLogger(__name__)
+
+REGIONS = ("V1", "M1")
+
+# BIDS acquisition labels of the MRS scans used by the pipeline
+_ACQ = {protocol: (acq, suffix) for protocol, (acq, suffix, _) in MRS_SCANS.items()}
+METAB = _ACQ["mega_press_TR1500"]        # ("megapress", "svs")
+REF_COMB = _ACQ["mega_press_wref1"]      # ("comb", "mrsref")
+REF_QUANT = _ACQ["mega_press_wref3"]     # ("quant", "mrsref")
+ECC = (ECC_ACQ, "mrsref")
 
 
 # -----------------------------------------------------------------------------
 # Internal helpers
 # -----------------------------------------------------------------------------
 
-def _single_match(directory: str | Path, pattern: str) -> Path:
-    """Return exactly one file matching a glob pattern in a directory."""
-    directory = Path(directory)
-    matches = sorted(directory.glob(pattern))
-
-    if not matches:
-        raise FileNotFoundError(f"No file matching {pattern!r} found in {directory}")
-    if len(matches) > 1:
-        raise RuntimeError(
-            f"More than one file matching {pattern!r} found in {directory}: {matches}"
-        )
-    return matches[0]
+def derivatives_dir(root: Path, subject: str, session: str) -> Path:
+    """Derivatives folder of one subject/session: root/derivatives/mrs/<sub>/<ses>/mrs."""
+    return root / "derivatives" / "mrs" / subject / session / "mrs"
 
 
-def _move_if_exists(src: Path, dst: Path) -> bool:
-    """Move a file if it exists; return True when moved."""
-    if not src.exists():
-        return False
-    ensure_dir(dst.parent)
-    src.rename(dst)
-    return True
-
-
-def _validate_subject_paths(root: Path, subject: Path, session: Path) -> None:
-    if not subject.exists():
-        raise FileNotFoundError(f"Missing subject folder: {subject}")
-    if not session.exists():
-        raise FileNotFoundError(f"Missing session folder: {session}")
-    if not root.exists():
-        raise FileNotFoundError(f"Missing root folder: {root}")
+def mrs_file(ses_path: Path, region: str, acq_suffix: tuple[str, str]) -> Path:
+    """Path of a converted MRS scan in the BIDS session folder (may not exist)."""
+    subject, session = ses_path.parent.name, ses_path.name
+    acq, suffix = acq_suffix
+    return ses_path / "mrs" / mrs_filename(subject, session, acq, region, suffix)
 
 
 # -----------------------------------------------------------------------------
-# spec2nii conversion
-# -----------------------------------------------------------------------------
-
-def process_files_with_spec2nii(
-    folder: str | Path,
-    exclude: Optional[Iterable[str]] = None,
-    include: Optional[Iterable[str]] = None,
-    *,
-    derivatives_root_name: str = "derivatives",
-) -> None:
-    """Convert raw MRS .dat files into NIfTI outputs using spec2nii.
-
-    Expected input structure:
-        root/sub-01/ses-1/mrs/*.dat
-        root/sub-01/ses-2/mrs/*.dat
-
-    Outputs are written to:
-        root/derivatives/mrs/sub-01/ses-1/mrs/
-        root/derivatives/mrs/sub-01/ses-2/mrs/
-    """
-    require_command("spec2nii")
-
-    root = Path(folder)
-    if not root.exists():
-        raise FileNotFoundError(f"The folder does not exist: {root}")
-
-    for subj_path, ses_path in iter_subject_session_dirs(root, include=include, exclude=exclude):
-        mrs_folder = ses_path / "mrs"
-        if not mrs_folder.exists():
-            LOGGER.info("No mrs folder found: %s", mrs_folder)
-            continue
-
-        derivatives_folder = root / derivatives_root_name / "mrs" / subj_path.name / ses_path.name / "mrs"
-        ensure_dir(derivatives_folder)
-
-        LOGGER.info("Processing %s", mrs_folder)
-
-        for dat_file in sorted(mrs_folder.glob("*.dat")):
-            file_name = dat_file.name
-            base = dat_file.stem
-
-            if "mega-press_acq-metab" in file_name:
-                run_command([
-                    "spec2nii", "twix",
-                    "-e", "image",
-                    "-f", f"{base}_metab",
-                    "-o", str(derivatives_folder),
-                    "-j", "-q",
-                    str(dat_file),
-                ])
-                run_command([
-                    "spec2nii", "twix",
-                    "-e", "phasecor",
-                    "-f", f"{base}_phase_correlated",
-                    "-o", str(derivatives_folder),
-                    "-j", "-q",
-                    str(dat_file),
-                ])
-
-            elif "mega-press_acq-wref-comb-raw" in file_name:
-                run_command([
-                    "spec2nii", "twix",
-                    "-e", "image",
-                    "-f", f"{base}_wref-comb-raw",
-                    "-o", str(derivatives_folder),
-                    "-j", "-q",
-                    str(dat_file),
-                ])
-
-            elif "mega-press_acq-wref-quant-raw" in file_name:
-                run_command([
-                    "spec2nii", "twix",
-                    "-e", "image",
-                    "-f", f"{base}_wref-quant-raw",
-                    "-o", str(derivatives_folder),
-                    "-j", "-q",
-                    str(dat_file),
-                ])
-            else:
-                LOGGER.debug("Skipping unrecognised .dat file: %s", dat_file)
-
-
-# -----------------------------------------------------------------------------
-# Quick-look visualisation from derivatives
+# Quick-look visualisation
 # -----------------------------------------------------------------------------
 
 def glance_from_derivatives(
@@ -148,43 +60,43 @@ def glance_from_derivatives(
     include: Optional[Iterable[str]] = None,
     exclude: Optional[Iterable[str]] = None,
 ) -> None:
-    """Create PNG and text summaries from reconstructed MRS derivative images."""
+    """Create PNG and text summaries (mrs_tools vis / info) of the converted MRS data.
+
+    Outputs go to ``derivatives/mrs/<sub>/<ses>/mrs/glance/``.
+    """
     require_command("mrs_tools")
 
     root = Path(folder)
     if not root.exists():
         raise FileNotFoundError(f"The folder does not exist: {root}")
 
+    ppm_ranges = {METAB: ("0", "6.65"), ECC: ("0", "6.65"), REF_COMB: ("2.65", "6.65"), REF_QUANT: ("2.65", "6.65")}
+
     for subj_path, ses_path in iter_subject_session_dirs(root, include=include, exclude=exclude):
-        derivatives_folder = root / "derivatives" / "mrs" / subj_path.name / ses_path.name / "mrs"
-        if not derivatives_folder.exists():
-            LOGGER.info("No derivatives folder found: %s", derivatives_folder)
-            continue
+        out_folder = derivatives_dir(root, subj_path.name, ses_path.name) / "glance"
 
-        for nii_file in sorted(derivatives_folder.glob("*.nii.gz")):
-            name = nii_file.name
-            png_out = nii_file.with_name(nii_file.name.replace(".nii.gz", ".png"))
-            txt_out = nii_file.with_name(nii_file.name.replace(".nii.gz", ".txt"))
+        for region in REGIONS:
+            for acq_suffix, (ppm_min, ppm_max) in ppm_ranges.items():
+                nii_file = mrs_file(ses_path, region, acq_suffix)
+                if not nii_file.exists():
+                    continue
 
-            if "metab.nii" in name or "phase_correlated.nii" in name:
-                ppm_min, ppm_max = "0", "6.65"
-            elif "wref-comb-raw" in name or "wref-quant-raw" in name:
-                ppm_min, ppm_max = "2.65", "6.65"
-            else:
-                continue
+                ensure_dir(out_folder)
+                stem = nii_file.name.replace(".nii.gz", "")
+                run_command([
+                    "mrs_tools", "vis", str(nii_file),
+                    "--save", str(out_folder / f"{stem}.png"),
+                    "--ppmlim", ppm_min, ppm_max,
+                ])
 
-            run_command([
-                "mrs_tools", "vis", str(nii_file), "--save", str(png_out), "--ppmlim", ppm_min, ppm_max
-            ])
-
-            with open(txt_out, "w", encoding="utf-8") as handle:
-                subprocess.run(
-                    ["mrs_tools", "info", str(nii_file)],
-                    stdout=handle,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    check=True,
-                )
+                with open(out_folder / f"{stem}.txt", "w", encoding="utf-8") as handle:
+                    subprocess.run(
+                        ["mrs_tools", "info", str(nii_file)],
+                        stdout=handle,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                        check=True,
+                    )
 
 
 # -----------------------------------------------------------------------------
@@ -217,7 +129,7 @@ def MRS_anat_process(
     include: Optional[Iterable[str]] = None,
     exclude: Optional[Iterable[str]] = None,
 ) -> None:
-    """Process anatomical files for all selected subjects and sessions."""
+    """Run fsl_anat on the T1w image of every selected subject and session."""
     root = Path(folder)
     if not root.exists():
         raise FileNotFoundError(f"The folder does not exist: {root}")
@@ -225,14 +137,11 @@ def MRS_anat_process(
     tasks: list[tuple[Path, Path]] = []
 
     for subj_path, ses_path in iter_subject_session_dirs(root, include=include, exclude=exclude):
-        derivatives_folder = root / "derivatives" / "mrs" / subj_path.name / ses_path.name / "mrs"
-        anat_folder = ses_path / "anat"
-
-        if not derivatives_folder.exists() or not anat_folder.exists():
+        anat_file = ses_path / "anat" / f"{subj_path.name}_{ses_path.name}_acq-MPRAGE_T1w.nii.gz"
+        if not anat_file.exists():
+            LOGGER.info("No T1w image: %s", anat_file)
             continue
-
-        for anat_file in anat_folder.glob("sub-*_acq-MPRAGE_T1w.nii.gz"):
-            tasks.append((anat_file, derivatives_folder))
+        tasks.append((anat_file, derivatives_dir(root, subj_path.name, ses_path.name)))
 
     if not tasks:
         LOGGER.info("No anatomical files found.")
@@ -265,7 +174,11 @@ def svs_segment_process(
     include: Optional[Iterable[str]] = None,
     exclude: Optional[Iterable[str]] = None,
 ) -> None:
-    """Run svs_segment for V1 and M1 metabolite maps."""
+    """Run svs_segment for the V1 and M1 voxels (tissue fractions and voxel masks).
+
+    Writes ``MRS_fit_<region>_mask.nii.gz`` and ``MRS_fit_<region>_segmentation.json``
+    to the derivatives folder.
+    """
     require_command("svs_segment")
 
     root = Path(folder)
@@ -273,7 +186,7 @@ def svs_segment_process(
         raise FileNotFoundError(f"The folder does not exist: {root}")
 
     for subj_path, ses_path in iter_subject_session_dirs(root, include=include, exclude=exclude):
-        derivatives_folder = root / "derivatives" / "mrs" / subj_path.name / ses_path.name / "mrs"
+        derivatives_folder = derivatives_dir(root, subj_path.name, ses_path.name)
         if not derivatives_folder.exists():
             LOGGER.info("No derivatives folder found: %s", derivatives_folder)
             continue
@@ -283,32 +196,20 @@ def svs_segment_process(
             LOGGER.warning("No .anat folder found in %s", derivatives_folder)
             continue
 
-        v1_metab_file = derivatives_folder / "MRS_fit_V1_metab.nii.gz"
-        m1_metab_file = derivatives_folder / "MRS_fit_M1_metab.nii.gz"
+        for region in REGIONS:
+            metab_file = mrs_file(ses_path, region, METAB)
+            if not metab_file.exists():
+                LOGGER.info("No %s metabolite file: %s", region, metab_file)
+                continue
 
-        if v1_metab_file.exists():
             run_command([
                 "svs_segment",
-                str(v1_metab_file),
+                str(metab_file),
                 "-a", str(anat_folder),
                 "-o", str(derivatives_folder),
-                "-f", "MRS_fit_V1",
+                "-f", f"MRS_fit_{region}",
             ])
-            LOGGER.info("Processed SVS segmentation for V1 in %s", derivatives_folder)
-        else:
-            LOGGER.info("No V1 metab file found in %s", derivatives_folder)
-
-        if m1_metab_file.exists():
-            run_command([
-                "svs_segment",
-                str(m1_metab_file),
-                "-a", str(anat_folder),
-                "-o", str(derivatives_folder),
-                "-f", "MRS_fit_M1",
-            ])
-            LOGGER.info("Processed SVS segmentation for M1 in %s", derivatives_folder)
-        else:
-            LOGGER.info("No M1 metab file found in %s", derivatives_folder)
+            LOGGER.info("Processed SVS segmentation for %s in %s", region, derivatives_folder)
 
 
 # -----------------------------------------------------------------------------
@@ -321,12 +222,14 @@ def preproc(
     include: Optional[Iterable[str]] = None,
     exclude: Optional[Iterable[str]] = None,
 ) -> None:
-    """Run fsl_mrs_preproc_edit on MRS derivatives.
+    """Run fsl_mrs_preproc_edit on the converted MRS data of each voxel.
+
+    Outputs go to ``derivatives/mrs/<sub>/<ses>/mrs/<region>/MRS_preproc_data/``.
 
     Parameters
     ----------
     folder:
-        Root data directory.
+        Root data directory (the BIDS dataset).
     ref_water:
         Reserved for future use. Kept for compatibility with the notebook API.
     include, exclude:
@@ -339,48 +242,25 @@ def preproc(
         raise FileNotFoundError(f"The folder does not exist: {root}")
 
     for subj_path, ses_path in iter_subject_session_dirs(root, include=include, exclude=exclude):
-        derivatives_folder = root / "derivatives" / "mrs" / subj_path.name / ses_path.name / "mrs"
-        if not derivatives_folder.exists():
-            LOGGER.info("No derivatives folder found: %s", derivatives_folder)
-            continue
+        derivatives_folder = derivatives_dir(root, subj_path.name, ses_path.name)
 
-        for region in ("V1", "M1"):
-            region_folder = derivatives_folder / region
-            preproc_folder = region_folder / "MRS_preproc_data"
+        for region in REGIONS:
+            metab_file = mrs_file(ses_path, region, METAB)
+            ref_file = mrs_file(ses_path, region, REF_COMB)
+            quant_file = mrs_file(ses_path, region, REF_QUANT)
+            ecc_file = mrs_file(ses_path, region, ECC)
 
-            # Inputs expected from the previous pipeline stages.
-            metab_file = None
-            ref_file = None
-            quant_file = None
-            ecc_file = None
-
-            for file in derivatives_folder.rglob("*.nii.gz"):
-                name = file.name
-                if region not in name:
-                    continue
-
-                if "metab" in name and "phase_correlated" not in name:
-                    metab_file = file
-                elif "phase_correlated" in name:
-                    ecc_file = file
-                elif "wref-comb-raw" in name:
-                    ref_file = file
-                elif "wref-quant-raw" in name:
-                    quant_file = file
-
-            if metab_file is None or ref_file is None:
-                LOGGER.warning(
-                    "Required files for %s not found in %s", region, derivatives_folder
-                )
+            if not metab_file.exists() or not ref_file.exists():
+                LOGGER.warning("Required files for %s not found in %s", region, ses_path / "mrs")
                 continue
 
-            ensure_dir(preproc_folder)
+            preproc_folder = ensure_dir(derivatives_folder / region / "MRS_preproc_data")
 
             cmd = [
                 "fsl_mrs_preproc_edit",
                 "--data", str(metab_file),
                 "--reference", str(ref_file),
-                "--quant", str(quant_file) if quant_file is not None else str(ref_file),
+                "--quant", str(quant_file) if quant_file.exists() else str(ref_file),
                 "--output", str(preproc_folder),
                 "--hlsvd",
                 "--report",
@@ -389,24 +269,8 @@ def preproc(
                 "--align_ppm_edit", "2.5", "3.5",
             ]
 
-            if ecc_file is not None:
+            if ecc_file.exists():
                 cmd.extend(["--ecc", str(ecc_file)])
 
             run_command(cmd)
             LOGGER.info("Processed %s files in %s", region, derivatives_folder)
-
-
-# -----------------------------------------------------------------------------
-# Optional small helper for early cleanup
-# -----------------------------------------------------------------------------
-
-def move_file_to_other_folder(
-    file_path: str | Path,
-    other_folder: str | Path,
-) -> Path:
-    """Move a file into an 'other' folder and return the new path."""
-    file_path = Path(file_path)
-    other_folder = ensure_dir(other_folder)
-    target = other_folder / file_path.name
-    file_path.rename(target)
-    return target

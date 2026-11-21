@@ -6,7 +6,7 @@ Top-level package for the MRS analysis pipeline.
 This file exposes the most commonly used functions so they can be imported
 directly from the package, for example:
 
-    from mrs_pipeline import preproc, mrs_analysis_process
+    from mrs_pipeline import convert_raw_to_bids, preproc, mrs_analysis_process
 """
 
 from .utils import (
@@ -30,13 +30,14 @@ from .preprocessing import (
     glance_from_derivatives,
     preproc,
     process_anatomical_file,
-    process_files_with_spec2nii,
     svs_segment_process,
 )
 
 from .analysis import (
     mrs_analysis_process,
 )
+
+from .raw_to_bids import convert as convert_raw_to_bids
 
 __all__ = [
     # utils
@@ -56,8 +57,9 @@ __all__ = [
     "glance_from_derivatives",
     "preproc",
     "process_anatomical_file",
-    "process_files_with_spec2nii",
     "svs_segment_process",
     # analysis
     "mrs_analysis_process",
+    # raw data -> BIDS
+    "convert_raw_to_bids",
 ]

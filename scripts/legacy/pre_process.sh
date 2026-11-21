@@ -170,13 +170,13 @@ t1_files_process() {
         [[ -e "$file" ]] || continue
         case "$file" in
           *.nii|*.nii.gz)
-            immv "$file" "$anat_folder/${subjnum}_${session_label}_acq-MPRAGE_T1w.nii.gz"
+            immv "$file" "$anat_folder/${subjnum}_${session_label}_acq-MP2RAGE_T1w.nii.gz"
             bet \
-              "$anat_folder/${subjnum}_${session_label}_acq-MPRAGE_T1w.nii.gz" \
-              "$anat_folder/${subjnum}_${session_label}_acq-MPRAGE_T1w_brain.nii.gz"
+              "$anat_folder/${subjnum}_${session_label}_acq-MP2RAGE_T1w.nii.gz" \
+              "$anat_folder/${subjnum}_${session_label}_acq-MP2RAGE_T1w_brain.nii.gz"
             ;;
           *.json)
-            mv -- "$file" "$anat_folder/${subjnum}_${session_label}_acq-MPRAGE_T1w.json"
+            mv -- "$file" "$anat_folder/${subjnum}_${session_label}_acq-MP2RAGE_T1w.json"
             ;;
         esac
       done
@@ -187,13 +187,13 @@ t1_files_process() {
         [[ -e "$file" ]] || continue
         case "$file" in
           *.nii|*.nii.gz)
-            immv "$file" "$anat_folder/${subjnum}_${session_label}_acq-TSE_T2w.nii.gz"
+            immv "$file" "$anat_folder/${subjnum}_${session_label}_acq-MP2RAGE_T2w.nii.gz"
             bet \
-              "$anat_folder/${subjnum}_${session_label}_acq-TSE_T2w.nii.gz" \
-              "$anat_folder/${subjnum}_${session_label}_acq-TSE_T2w_brain.nii.gz"
+              "$anat_folder/${subjnum}_${session_label}_acq-MP2RAGE_T2w.nii.gz" \
+              "$anat_folder/${subjnum}_${session_label}_acq-MP2RAGE_T2w_brain.nii.gz"
             ;;
           *.json)
-            mv -- "$file" "$anat_folder/${subjnum}_${session_label}_acq-TSE_T2w.json"
+            mv -- "$file" "$anat_folder/${subjnum}_${session_label}_acq-MP2RAGE_T2w.json"
             ;;
         esac
       done

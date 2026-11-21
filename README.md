@@ -10,10 +10,9 @@ spectroscopy (MRS) data of the study:
 > in Adult Amblyopia** (in preparation).
 
 It provides:
-- A **Bash pipeline** that organises raw MRI/MRS data into a BIDS-like
-  structure and runs the FSL-based anatomical preprocessing
-- A **Python package (`mrs_pipeline`)** that runs MRS conversion,
-  preprocessing, segmentation and quantification, and aggregates the results
+- A **raw-to-BIDS conversion** of the scanner export (anatomy and MRS)
+- A **Python package (`mrs_pipeline`)** that runs MRS preprocessing,
+  segmentation and quantification, and aggregates the results
 - A **Jupyter notebook** that drives the full analysis
 - **Voxel-overlap scripts** comparing voxel placement across sessions
 
@@ -91,48 +90,76 @@ spec2nii (an FSL-MRS dependency) and the Python dependencies.
 pip install -e .
 ```
 
-### 5. Other external tools
-- `immv` from [renameutils](https://www.nongnu.org/renameutils/), used by the
-  Bash pipeline
-
-Check that the tools are available:
+Check that the tools are available and the tests pass:
 ```bash
-which fslmaths fsl_anat svs_segment fsl_mrs spec2nii mrs_tools immv
+which fsl_anat svs_segment fsl_mrs fsl_mrs_preproc_edit spec2nii mrs_tools
+pytest tests
 ```
 
 ## Pipeline
 
 ```mermaid
 flowchart LR
-    Raw["Raw MRI/MRS data\n(Siemens TWIX .dat, T1)"]
-    Bash["scripts/run_preprocess.sh\norganise + anatomical preproc"]
-    Conv["spec2nii\nconversion"]
+    Raw["Raw scanner export\n(dcm2niix NIfTI, Siemens twix .dat)"]
+    Bids["raw_to_bids\nBIDS anat + mrs (spec2nii)"]
     Pre["fsl_mrs_preproc_edit\npreprocessing"]
     Seg["fsl_anat + svs_segment\ntissue fractions"]
     Fit["fsl_mrs\nquantification"]
     Agg["summary / QC /\ntissue-fraction tables"]
 
-    Raw --> Bash --> Conv --> Pre --> Fit --> Agg
-    Bash --> Seg --> Fit
+    Raw --> Bids --> Pre --> Fit --> Agg
+    Bids --> Seg --> Fit
 ```
 
-### 1. Preprocessing (Bash)
+### 1. Raw data → BIDS
 
-The Bash pipeline:
-- Organises raw data into a **BIDS-like structure** with session folders
-  (`ses-1`, `ses-2`)
-- Renames files using consistent conventions
-- Runs FSL-based preprocessing (fieldmaps, anatomical processing)
-- Prepares the MRS data for the Python steps
+`mrs_pipeline.raw_to_bids` converts the raw export into a BIDS 1.10 dataset.
+It is adapted from the conversion of the pRF_amblyopia repository, restricted
+to anatomy and MRS. Expected raw layout, one folder per participant (session
+folders optional):
+
+```
+<raw>/sub-10/[sub-10-ses-1-pretraining/]F3T_2022_021_019/   NIfTI + JSON (dcm2niix)
+<raw>/sub-10/[sub-10-ses-1-pretraining/]2022_021_019/       MRS twix .dat files, voxel screenshots
+```
 
 ```bash
-scripts/run_preprocess.sh /path/to/data
+mrs-raw-to-bids /path/to/raw --bids-dir /path/to/bids                  # dry run: prints the plan and warnings
+mrs-raw-to-bids /path/to/raw --bids-dir /path/to/bids --apply          # convert
+mrs-raw-to-bids /path/to/raw --bids-dir /path/to/bids --include sub-10 --apply
 ```
+
+The conversion:
+- **copies** the data and leaves the raw export untouched
+- numbers sessions by scan ID, cross-checked against `pretraining` /
+  `posttraining` labels in the folder names
+- keeps the intensity-normalised (NORM) copy of the T1w/T2w
+- converts each twix file with `spec2nii` (anonymised) to
+  `sub-XX_ses-Y_acq-<label>_voi-<V1|M1>_<suffix>.nii.gz`:
+
+  | Scan | File |
+  |---|---|
+  | MEGA-PRESS metabolites | `acq-megapress_..._svs` |
+  | Phase-correction scans of the MEGA-PRESS file (eddy-current reference) | `acq-ecc_..._mrsref` |
+  | Water reference (coil combination) | `acq-comb_..._mrsref` |
+  | Water reference (quantification) | `acq-quant_..._mrsref` |
+  | Linewidth check / flip-angle calibration | `acq-lw_..._mrsref`, `acq-facal_..._mrsref` |
+
+- converts the last acquisition when a scan was repeated, and reports the
+  repeat
+- copies the raw twix files and screenshots to `sourcedata/`, and logs every
+  file in `sourcedata/<sub>/conversion_log.tsv`
+
+fMRI, field maps and eye-tracking data are left out: the pRF_amblyopia
+repository converts those.
+
+The Bash scripts that organised the data for the published results are kept,
+unchanged, in [`scripts/legacy/`](scripts/legacy/).
 
 ### 2. MRS processing (Python)
 
-The `mrs_pipeline` package runs:
-- Conversion of the raw data (`spec2nii`)
+The `mrs_pipeline` package reads the BIDS dataset and writes to
+`<bids>/derivatives/mrs/`. It runs:
 - Visual QC (`mrs_tools`)
 - Preprocessing (`fsl_mrs_preproc_edit`)
 - Segmentation (`fsl_anat`, `svs_segment`)
@@ -140,14 +167,20 @@ The `mrs_pipeline` package runs:
 - Aggregation of the summary, QC and tissue-fraction outputs
 
 ```python
-from mrs_pipeline import preproc, mrs_analysis_process
+import mrs_pipeline as mp
 
-data_dir = "/path/to/data"
+bids_dir = "/path/to/bids"
 basis_sets = "/path/to/basis_sets"
 
-preproc(data_dir)
-mrs_analysis_process(data_dir, basis_sets)
+mp.convert_raw_to_bids("/path/to/raw", bids_dir, apply=True)
+mp.preproc(bids_dir)
+mp.MRS_anat_process(bids_dir)
+mp.svs_segment_process(bids_dir)
+mp.mrs_analysis_process(bids_dir, basis_sets)
 ```
+
+Subject filters (`include=["sub-10"]`, `exclude=[...]`) take exact
+participant names.
 
 **Basis sets:** we used
 [`uzay_svs_mpress_68_with_db`](https://git.fmrib.ox.ac.uk/wclarke/win-mrs-basis-sets/-/tree/master/basis_sets/uzay_svs_mpress/uzay_svs_mpress_68_with_db?ref_type=heads)
@@ -192,8 +225,8 @@ the pinned version to reproduce the published values exactly.
 ### 3. Notebook
 
 [`notebook/fsl_mrs_notebook.ipynb`](notebook/fsl_mrs_notebook.ipynb) walks
-through each step, from conversion to the final summary tables. Set `DATA_DIR`
-and `BASIS_SETS_DIR` in its configuration cell.
+through each step, from conversion to the final summary tables. Set `RAW_DIR`,
+`DATA_DIR` (the BIDS dataset) and `BASIS_SETS_DIR` in its configuration cell.
 
 ### Extra: voxel overlap
 
@@ -201,15 +234,21 @@ These scripts compare voxel placement across sessions, compute overlap
 metrics, and project voxels into MNI space:
 
 ```bash
-scripts/voxel_overlap.sh --data /path/to/data
-scripts/combine_voxels.sh --data /path/to/data
+scripts/voxel_overlap.sh --data /path/to/bids
+scripts/combine_voxels.sh --data /path/to/bids
 ```
 
 ## Reproducibility notes
 
 - No paths are hardcoded: set them through script arguments or notebook
   variables.
-- Intermediate outputs are written to `derivatives/`.
+- Intermediate outputs are written to `derivatives/`; the BIDS raw folders are
+  never modified.
+- The published results used data organised by the legacy Bash scripts
+  (`scripts/legacy/`). The new conversion uses the same spec2nii extraction
+  and the same processing commands. It differs in two ways: the NIfTI-MRS
+  headers are anonymised, and the NORM copy of the T1w is selected
+  explicitly.
 - Each step can be run on its own.
 - FSL-MRS writes the exact options of each run to `options.txt` in its
   output folder.
